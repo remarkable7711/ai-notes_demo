@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI Notes Demo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <div class="sidebar">
+        <h3>笔记列表</h3>
+        <button onclick="createNewNote()">新建笔记</button>
+        <div id="noteList"></div>
+    </div>
+    <div class="main">
+        <input id="noteTitle" placeholder="笔记标题">
+        <textarea id="noteEditor" placeholder="在此编写笔记，选中文字后点「插入内部链接」"></textarea>
+        <div class="toolbar">
+            <button onclick="insertInternalLink()">插入内部链接</button>
+            <button onclick="saveNote()">保存笔记</button>
+            <button onclick="deleteNote()">删除笔记</button>
+        </div>
+        <div class="link-panel">
+            <div class="panel">
+                <h4>出链（本笔记指向）</h4>
+                <div id="outlinkList"></div>
+            </div>
+            <div class="panel">
+                <h4>反向链接（谁引用本笔记）</h4>
+                <div id="backlinkList"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 弹窗：勾选笔记用于链接 -->
+<div id="linkModal" class="modal">
+    <div class="modal-content">
+        <h4>选择要链接到的笔记（勾选）</h4>
+        <div id="modalNoteList"></div>
+        <button onclick="confirmInsertLink()">确认插入</button>
+        <button onclick="closeModal()">取消</button>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
