@@ -1,258 +1,176 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { LandingConstellation } from "./landing-constellation";
-import { LandingParticleField } from "./landing-particle-field";
-import { LandingStardust } from "./landing-stardust";
+import { useEffect, useRef, useState } from "react";
+import { LandingKnowledgeScene } from "./landing-knowledge-scene";
 
 type LandingPageProps = {
   onEnter: () => void;
 };
 
-const FEATURES = [
+const CHAPTERS = [
   {
-    index: "01",
-    title: "原始记录",
-    body: "用户可改，AI 不可改。你的原话永远是第一手材料，任何整理都不能篡改它。",
-    glyph: "✎",
+    eyebrow: "01 / LONG-TERM MEMORY",
+    title: "Chordnote --",
+    subtitle: "你的长期AI知识架构师",
+    body: "让零散记录不再停在文件夹里，而是逐渐长成一张能陪你四年的知识网络。",
   },
   {
-    index: "02",
-    title: "AI 提议，你确认",
-    body: "AI 只产出草稿与关联建议，落库与否由你决定 —— 网络里不会出现你没点头的东西。",
-    glyph: "◈",
+    eyebrow: "02 / FROM NOTE TO CHORD",
+    title: "一条笔记是音符，\n连起来才是和弦。",
+    body: "Chordnote 的核心使命是打破传统笔记“只存不连”与通用 AI“无记忆、易幻觉”的瓶颈，让 AI 扮演“知识架构师”——帮助大学生将零散的学习记录升维为贯穿大学四年的体系化知识网络。",
   },
   {
-    index: "03",
-    title: "双向链接",
-    body: "知识页彼此引用，反向链接自动浮现。谁引用过它，一眼就看见。",
-    glyph: "⇄",
+    eyebrow: "03 / LLM WIKI × OBSIDIAN",
+    title: "工作流有规则，\n知识网络有记忆。",
+    body: "基于 Andrej Karpathy 提出的 LLM Wiki 架构与 Obsidian 双向链接知识图谱：我们为 Chordnote 增添了一份 Schema，不仅规范了 Agent 的 workflow，还可以根据用户的偏好不断更新完善。",
   },
   {
-    index: "04",
-    title: "看见网络",
-    body: "图谱从真实的关联里长出来，节点大小跟着被引用次数走，缺口一眼看得到。",
-    glyph: "◉",
+    eyebrow: "04 / DESIGN ORIGIN",
+    title: "清晰，克制，\n让内容成为主角。",
+    body: "设计灵感来源于瑞士国际主义平面设计和 Lenny Rachitsky 的苹果设计理念。",
   },
 ] as const;
 
-const STEPS = [
-  { order: "1", title: "留下原话", body: "课上怎么记就怎么写，不需要先想好分类。" },
-  { order: "2", title: "让 AI 整理", body: "它读你已有的库，提出归纳页与可能的关系。" },
-  { order: "3", title: "你确认", body: "点下接受的那一刻，关系才真正成立。" },
-] as const;
+const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
+const smoothstep = (value: number) => {
+  const x = clamp(value);
+  return x * x * (3 - 2 * x);
+};
 
 export function LandingPage({ onEnter }: LandingPageProps) {
   const pageRef = useRef<HTMLElement | null>(null);
+  const storyRef = useRef<HTMLElement | null>(null);
+  const [activeChapter, setActiveChapter] = useState(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
-  // 滚动进度：驱动玻璃卡的浮起与光斑位移
   useEffect(() => {
-    function onScroll() {
-      const span = Math.max(1, window.innerHeight);
-      const progress = Math.min(window.scrollY / span, 1);
-      pageRef.current?.style.setProperty("--scroll-progress", progress.toFixed(3));
-    }
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const page = pageRef.current;
+    const story = storyRef.current;
+    if (!page || !story) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setReducedMotion(reduceMotion);
+
+    const paint = () => {
+      const rect = story.getBoundingClientRect();
+      const travel = Math.max(1, rect.height - window.innerHeight);
+      const progress = clamp(-rect.top / travel);
+      const night = smoothstep((progress - 0.5) / 0.45);
+      const graph = smoothstep((progress - 0.38) / 0.34);
+      const closeUp = smoothstep(progress / 0.44) * (1 - smoothstep((progress - 0.58) / 0.32));
+      const sceneScale = 1 + closeUp * 0.29 + graph * 0.04;
+      const sceneX = (-7 * closeUp + 3 * graph).toFixed(3);
+      const sceneY = (-5 * closeUp + 1.5 * graph).toFixed(3);
+
+      page.style.setProperty("--story-progress", progress.toFixed(4));
+      page.style.setProperty("--night-progress", night.toFixed(4));
+      page.style.setProperty("--graph-progress", graph.toFixed(4));
+      page.style.setProperty("--scene-scale", sceneScale.toFixed(4));
+      page.style.setProperty("--scene-x", `${sceneX}vw`);
+      page.style.setProperty("--scene-y", `${sceneY}vh`);
+      page.style.setProperty("--graph-offset", `${(1 - graph) * 1180}px`);
+
+      const nextChapter = Math.min(CHAPTERS.length - 1, Math.floor(clamp(progress * CHAPTERS.length, 0, 3.999)));
+      setActiveChapter((previous) => previous === nextChapter ? previous : nextChapter);
+    };
+
+    paint();
+    window.addEventListener("scroll", paint, { passive: true });
+    window.addEventListener("resize", paint);
+    return () => {
+      window.removeEventListener("scroll", paint);
+      window.removeEventListener("resize", paint);
+    };
   }, []);
 
   return (
-    <main ref={pageRef} className="landing">
-      <div className="landing-blobs" aria-hidden="true">
-        <span className="blob blob-1" />
-        <span className="blob blob-2" />
-        <span className="blob blob-3" />
-        <span className="blob blob-4" />
-        <span className="blob blob-5" />
-        <span className="blob blob-6" />
-      </div>
-      <div className="landing-grain" aria-hidden="true" />
-      <LandingConstellation />
-      <LandingStardust />
+    <main ref={pageRef} className="landing landing-film">
+      <a className="landing-film-skip" href="#landing-story">跳到介绍内容</a>
 
-      {/* 极光流星雨：CSS 层，3–5 秒一颗，绝不干扰阅读 */}
-      <div className="landing-meteors" aria-hidden="true">
-        <span className="meteor meteor-1" />
-        <span className="meteor meteor-2" />
-        <span className="meteor meteor-3" />
-      </div>
+      <header className="landing-film-nav">
+        <a className="landing-film-brand" href="#landing-top" aria-label="Chordnote 首页">
+          <span className="landing-film-brand-grid" aria-hidden="true"><i /><i /><i /><i /></span>
+          <strong>Chordnote</strong>
+        </a>
+        <nav aria-label="入口页章节">
+          <a href="#landing-idea">理念</a>
+          <a href="#landing-architecture">架构</a>
+          <a href="#landing-design">设计</a>
+        </nav>
+        <button type="button" onClick={onEnter}>进入工作台 <span aria-hidden="true">↗</span></button>
+      </header>
 
-      {/* 无限延伸的透视网格地面 + 地平线渐隐 */}
-      <div className="landing-grid" aria-hidden="true">
-        <div className="landing-grid-plane" />
-        <div className="landing-grid-fade" />
-      </div>
+      <section id="landing-top" className="landing-film-opening" aria-label="Chordnote 入口">
+        <p className="landing-film-coordinate" aria-hidden="true">X 000.00<br />Y 000.00</p>
+        <p className="landing-film-hand landing-film-hand--left" aria-hidden="true">LONG-TERM MEMORY</p>
+        <h1 className="landing-film-opening-title">
+          <span>Chordnote --</span>
+          <strong>你的长期AI<br />知识架构师</strong>
+        </h1>
+        <p className="landing-film-hand landing-film-hand--right" aria-hidden="true">NOT JUST STORAGE ↗</p>
+        <a className="landing-film-scroll-cue" href="#landing-story">
+          <span>向下滚动</span><i aria-hidden="true">↓</i>
+        </a>
+      </section>
 
-      <div className="landing-content">
-        <header className="landing-nav">
-          <div className="landing-nav-inner">
-            <div className="landing-brand">
-              <span className="landing-brand-mark">C</span>
-              <strong>Chordnote</strong>
-            </div>
-            <nav className="landing-links" aria-label="页面导航">
-              <a href="#features">特点</a>
-              <a href="#flow">工作方式</a>
-            </nav>
-            <button className="landing-nav-cta" type="button" data-sound="press" onClick={onEnter}>
-              进入编辑室
-            </button>
-          </div>
-        </header>
-
-        <section className="landing-hero" aria-label="Chordnote 简介">
-          {/* 发光粒子场：Hero 右侧的视觉焦点 */}
-          <div className="landing-orb-slot" aria-hidden="true">
-            <LandingParticleField />
+      <section
+        ref={storyRef}
+        id="landing-story"
+        className="landing-film-story"
+        data-active-chapter={activeChapter}
+        aria-label="Chordnote 连续滚动介绍"
+      >
+        <span id="landing-idea" className="landing-film-marker landing-film-marker--idea" aria-hidden="true" />
+        <span id="landing-architecture" className="landing-film-marker landing-film-marker--architecture" aria-hidden="true" />
+        <span id="landing-design" className="landing-film-marker landing-film-marker--design" aria-hidden="true" />
+        <div className="landing-film-sticky">
+          <div className="landing-film-sky" aria-hidden="true">
+            <span className="landing-film-sun" />
+            <span className="landing-film-moon" />
+            <span className="landing-film-stars" />
           </div>
 
-          {/* 悬浮 UI 碎片：全息投影式装饰，pointer-events 关闭，不遮挡文字与按钮 */}
-          <div className="landing-shards" aria-hidden="true">
-            <div className="shard shard-note">
-              <span className="shard-head">
-                <span className="shard-icon">✏️</span>
-                <span className="shard-label">原始记录</span>
-              </span>
-              <span className="shard-skeleton">
-                <i style={{ width: "88%" }} />
-                <i style={{ width: "64%" }} />
-                <i style={{ width: "76%" }} />
-              </span>
-            </div>
-
-            <div className="shard shard-ai">
-              <span className="shard-head">
-                <span className="shard-icon shard-icon-spark">✨</span>
-                <span className="shard-label">AI 提炼</span>
-              </span>
-              <span className="shard-highlight" />
-              <span className="shard-skeleton">
-                <i style={{ width: "72%" }} />
-                <i style={{ width: "52%" }} />
-              </span>
-            </div>
-
-            <div className="shard shard-graph">
-              <svg viewBox="0 0 72 54" role="presentation" focusable="false">
-                <line x1="16" y1="14" x2="52" y2="20" />
-                <line x1="52" y1="20" x2="30" y2="42" />
-                <line x1="16" y1="14" x2="30" y2="42" />
-                <circle cx="16" cy="14" r="4.5" />
-                <circle cx="52" cy="20" r="4.5" />
-                <circle cx="30" cy="42" r="4.5" />
-              </svg>
-            </div>
+          <div className="landing-film-scene" aria-hidden="true">
+            <LandingKnowledgeScene />
           </div>
 
-          <p className="landing-eyebrow">
-            <span className="landing-eyebrow-dot" aria-hidden="true" />
-            面向大学生的 AI 学习知识系统
-          </p>
-          <h1 className="landing-title">
-            笔记不该是
-            <br />
-            <span className="landing-title-gradient">一座孤岛</span>
-            <span className="landing-title-period">。</span>
-          </h1>
-          <p className="landing-slogan">Notes become chords.<span>一条笔记是音符，连起来才是和弦</span></p>
-          <p className="landing-lede">
-            课堂上的原话先落进「原始记录」，AI 负责整理与提议，
-            <br className="landing-br-wide" />
-            你点头之后，它才成为知识网络里的一页。
-          </p>
-          <div className="landing-actions">
-            <button className="landing-primary" type="button" data-sound="press" onClick={onEnter}>
-              进入编辑室
-              <span aria-hidden="true">→</span>
-            </button>
-            <a className="landing-secondary" href="#features">
-              看它如何生长
-            </a>
-          </div>
-          <ul className="landing-facts">
-            <li>
-              <b>Raw</b>
-              <span>原始记录</span>
-            </li>
-            <li>
-              <b>Knowledge</b>
-              <span>知识页</span>
-            </li>
-            <li>
-              <b>Relation</b>
-              <span>关联</span>
-            </li>
-            <li>
-              <b>Graph</b>
-              <span>图谱</span>
-            </li>
-          </ul>
-        </section>
-
-        <section className="landing-section" id="features" aria-label="四个特点">
-          <div className="landing-section-head">
-            <h2>
-              四个特点，
-              <br />
-              笔记自成体系。
-            </h2>
-            <p className="landing-section-label">02 — 特点</p>
-          </div>
-          <div className="landing-cards">
-            {FEATURES.map((feature) => (
-              <article className="landing-card" key={feature.index}>
-                <span className="landing-card-glyph" aria-hidden="true">
-                  {feature.glyph}
-                </span>
-                <span className="landing-card-index">{feature.index}</span>
-                <h3>{feature.title}</h3>
-                <p>{feature.body}</p>
+          <div className="landing-film-chapters">
+            {CHAPTERS.map((chapter, index) => (
+              <article
+                key={chapter.eyebrow}
+                className={`landing-film-chapter landing-film-chapter--${index + 1}`}
+                aria-hidden={!reducedMotion && activeChapter !== index}
+              >
+                <p>{chapter.eyebrow}</p>
+                <h2>{chapter.title}</h2>
+                {"subtitle" in chapter && <h3>{chapter.subtitle}</h3>}
+                <div>{chapter.body}</div>
               </article>
             ))}
           </div>
-        </section>
 
-        <section className="landing-section" id="flow" aria-label="工作方式">
-          <div className="landing-section-head">
-            <h2>
-              三步，
-              <br />
-              让网络慢慢长出来。
-            </h2>
-            <p className="landing-section-label">03 — 工作方式</p>
-          </div>
-          <div className="landing-steps">
-            {STEPS.map((step) => (
-              <div className="landing-step-card" key={step.order}>
-                <span className="landing-step-order">{step.order}</span>
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
-              </div>
+          <ol className="landing-film-progress" aria-label="介绍进度">
+            {CHAPTERS.map((chapter, index) => (
+              <li key={chapter.eyebrow} className={index === activeChapter ? "is-active" : ""}>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+              </li>
             ))}
-          </div>
-        </section>
+          </ol>
 
-        <section className="landing-closing" aria-label="开始使用">
-          <div className="landing-closing-card">
-            <h2>
-              下一次考试前，
-              <br />
-              你的笔记已经连成网。
-            </h2>
-            <button className="landing-primary" type="button" data-sound="press" onClick={onEnter}>
-              进入编辑室
-              <span aria-hidden="true">→</span>
-            </button>
-            <p className="landing-note">概念验证版本，功能与界面随测试反馈持续调整。</p>
-          </div>
-        </section>
+          <p className="landing-film-direction" aria-hidden="true">SCROLL TO CONNECT <span>↓</span></p>
+        </div>
+      </section>
 
-        <footer className="landing-colophon">
-          <span>© Chordnote · 和弦 · 概念验证</span>
-          <span>AI 只提议，你确认，才写入你的网络</span>
-        </footer>
-      </div>
+      <section className="landing-film-closing" aria-label="开始使用 Chordnote">
+        <p>RAW → DRAFT → KNOWLEDGE → GRAPH</p>
+        <h2>把四年的学习，<br />连成自己的和弦。</h2>
+        <button type="button" onClick={onEnter}>进入工作台 <span aria-hidden="true">↗</span></button>
+      </section>
+
+      <footer className="landing-film-footer">
+        <span>Chordnote · 和弦</span>
+        <span>AI 只提议；你确认后，才写入知识网络。</span>
+      </footer>
     </main>
   );
 }
